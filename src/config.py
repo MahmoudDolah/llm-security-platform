@@ -51,11 +51,6 @@ class MonitoringConfig(BaseSettings):
     # Metrics
     enable_prometheus: bool = True
     metrics_port: int = 9090
-    
-    # DataDog (optional)
-    datadog_enabled: bool = False
-    datadog_api_key: Optional[str] = None
-    datadog_app_key: Optional[str] = None
 
 
 class AppConfig(BaseSettings):

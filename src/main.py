@@ -20,26 +20,34 @@ from llm_client import LLMClientFactory
 # Initialize logging
 logger = structlog.get_logger()
 
-# Initialize metrics
-REQUEST_COUNT = Counter(
-    'llm_requests_total', 
-    'Total number of LLM requests',
-    ['status', 'backend']
-)
-REQUEST_BLOCKED = Counter(
-    'llm_requests_blocked',
-    'Number of blocked requests',
-    ['reason']
-)
-REQUEST_DURATION = Histogram(
-    'llm_request_duration_seconds',
-    'Request duration in seconds'
-)
-PROMPT_INJECTION_DETECTED = Counter(
-    'llm_prompt_injection_detected',
-    'Number of prompt injections detected',
-    ['risk_level']
-)
+# Initialize metrics (with guards to prevent duplicate registration)
+try:
+    REQUEST_COUNT = Counter(
+        'llm_requests_total',
+        'Total number of LLM requests',
+        ['status', 'backend']
+    )
+    REQUEST_BLOCKED = Counter(
+        'llm_requests_blocked',
+        'Number of blocked requests',
+        ['reason']
+    )
+    REQUEST_DURATION = Histogram(
+        'llm_request_duration_seconds',
+        'Request duration in seconds'
+    )
+    PROMPT_INJECTION_DETECTED = Counter(
+        'llm_prompt_injection_detected',
+        'Number of prompt injections detected',
+        ['risk_level']
+    )
+except ValueError:
+    # Metrics already registered (happens with hot reload)
+    from prometheus_client import REGISTRY
+    REQUEST_COUNT = REGISTRY._names_to_collectors.get('llm_requests_total')
+    REQUEST_BLOCKED = REGISTRY._names_to_collectors.get('llm_requests_blocked')
+    REQUEST_DURATION = REGISTRY._names_to_collectors.get('llm_request_duration_seconds')
+    PROMPT_INJECTION_DETECTED = REGISTRY._names_to_collectors.get('llm_prompt_injection_detected')
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -241,12 +249,16 @@ async def chat(
     
     # 5. Forward to LLM
     try:
-        llm_response = await llm_client.generate(
-            prompt=request.prompt,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            model=request.model
-        )
+        # Build kwargs for LLM client, only including non-None values
+        llm_kwargs = {"prompt": request.prompt}
+        if request.max_tokens is not None:
+            llm_kwargs["max_tokens"] = request.max_tokens
+        if request.temperature is not None:
+            llm_kwargs["temperature"] = request.temperature
+        if request.model is not None:
+            llm_kwargs["model"] = request.model
+
+        llm_response = await llm_client.generate(**llm_kwargs)
         
         REQUEST_COUNT.labels(
             status="success",

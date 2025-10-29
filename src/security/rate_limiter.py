@@ -33,13 +33,18 @@ class RateLimiter:
     ):
         """
         Initialize rate limiter.
-        
+
         Args:
             redis_url: Redis connection URL
             requests_per_minute: Maximum requests per minute
             burst_size: Maximum burst size (tokens that can accumulate)
+
+        Raises:
+            redis.exceptions.ConnectionError: If Redis connection fails
         """
         self.redis_client = redis.from_url(redis_url, decode_responses=True)
+        # Test the connection immediately
+        self.redis_client.ping()
         self.rate = requests_per_minute
         self.burst_size = burst_size
         self.refill_rate = requests_per_minute / 60.0  # tokens per second

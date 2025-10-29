@@ -73,7 +73,7 @@ class OllamaClient(LLMClient):
             response = await self.client.post(url, json=payload)
             response.raise_for_status()
             data = response.json()
-            
+
             return LLMResponse(
                 content=data.get("response", ""),
                 model=data.get("model", self.model),
@@ -82,7 +82,10 @@ class OllamaClient(LLMClient):
                 metadata={"ollama_data": data}
             )
         except httpx.HTTPError as e:
-            raise Exception(f"Ollama request failed: {str(e)}")
+            error_detail = f"URL: {url}, Status: {getattr(e.response, 'status_code', 'N/A')}"
+            if hasattr(e, 'response'):
+                error_detail += f", Response: {e.response.text[:200]}"
+            raise Exception(f"Ollama request failed: {str(e)} - {error_detail}")
     
     async def health_check(self) -> bool:
         """Check if Ollama is running"""

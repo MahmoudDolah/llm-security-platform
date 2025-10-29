@@ -28,16 +28,16 @@ class PromptInjectionDetector:
     INJECTION_PATTERNS = {
         # Instruction override attempts
         "ignore_previous": [
-            r"ignore\s+(previous|above|prior|all)\s+(instructions?|prompts?|commands?)",
-            r"disregard\s+(previous|above|all)\s+(instructions?|prompts?)",
-            r"forget\s+(previous|all)\s+(instructions?|context|prompts?)",
+            r"ignore\s+(previous|above|prior|all|everything|your)",
+            r"disregard\s+(previous|above|all|everything|your)",
+            r"forget\s+(previous|all|everything|your)",
         ],
         
         # Role manipulation
         "role_play": [
-            r"you\s+are\s+now\s+a",
-            r"act\s+as\s+(a|an)\s+\w+",
-            r"pretend\s+(you|to)\s+(are|be)",
+            r"you\s+are\s+now",
+            r"act\s+as\s+(a|an|the)?\s*\w+",
+            r"pretend\s+(you\s+are|to\s+be|that)",
             r"roleplay\s+as",
             r"simulate\s+(being|a)",
         ],
@@ -51,31 +51,32 @@ class PromptInjectionDetector:
         
         # Jailbreak attempts
         "jailbreak": [
-            r"DAN\s+mode",
+            r"\bDAN\b",
             r"developer\s+mode",
             r"sudo\s+mode",
             r"evil\s+(mode|bot)",
             r"jailbreak",
             r"unrestricted\s+mode",
+            r"do\s+anything\s+now",
         ],
         
         # Delimiter injection
         "delimiter_attack": [
             r"[{}<>]+\s*(system|user|assistant|instruction|prompt)",
             r"```\s*(system|assistant|user)",
-            r"###\s*(system|instruction|new\s+prompt)",
+            r"###\s+(system|instruction|new)",
         ],
         
         # Code execution attempts
         "code_injection": [
-            r"(execute|run|eval|exec)\s+(this|the\s+following)?\s*(code|script|command)",
+            r"(execute|run|eval|exec)\s+(this|the)?\s*(code|script|command|python)?",
             r"```(python|javascript|bash|sh|shell)",
         ],
         
         # Context manipulation
         "context_manipulation": [
             r"new\s+(conversation|chat|session|context)",
-            r"reset\s+(conversation|context|memory|history)",
+            r"reset\s+(your\s+)?(conversation|context|memory|history)",
             r"clear\s+(previous|all)\s+(messages?|context|history)",
         ],
     }
@@ -153,9 +154,9 @@ class PromptInjectionDetector:
             "system_prompt_leak": 0.95,
             "jailbreak": 1.0,
             "code_injection": 0.85,
-            "role_play": 0.7,
+            "role_play": 0.8,
             "delimiter_attack": 0.8,
-            "context_manipulation": 0.75,
+            "context_manipulation": 0.8,
         }
         return severity_map.get(category, 0.5)
     
