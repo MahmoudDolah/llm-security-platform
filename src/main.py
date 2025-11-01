@@ -40,12 +40,18 @@ except ValueError:
     # Metrics already registered (happens with hot reload)
     from prometheus_client import REGISTRY
 
-    REQUEST_COUNT = REGISTRY._names_to_collectors.get("llm_requests_total")
-    REQUEST_BLOCKED = REGISTRY._names_to_collectors.get("llm_requests_blocked")
-    REQUEST_DURATION = REGISTRY._names_to_collectors.get("llm_request_duration_seconds")
+    REQUEST_COUNT = REGISTRY._names_to_collectors.get(
+        "llm_requests_total"
+    )  # type: ignore
+    REQUEST_BLOCKED = REGISTRY._names_to_collectors.get(
+        "llm_requests_blocked"
+    )  # type: ignore
+    REQUEST_DURATION = REGISTRY._names_to_collectors.get(
+        "llm_request_duration_seconds"
+    )  # type: ignore
     PROMPT_INJECTION_DETECTED = REGISTRY._names_to_collectors.get(
         "llm_prompt_injection_detected"
-    )
+    )  # type: ignore
 
 # Initialize FastAPI app
 app = FastAPI(

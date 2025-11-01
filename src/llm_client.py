@@ -84,10 +84,9 @@ class OllamaClient(LLMClient):
                 metadata={"ollama_data": data},
             )
         except httpx.HTTPError as e:
-            error_detail = (
-                f"URL: {url}, Status: {getattr(e.response, 'status_code', 'N/A')}"
-            )
-            if hasattr(e, "response"):
+            status_code = getattr(getattr(e, "response", None), "status_code", "N/A")
+            error_detail = f"URL: {url}, Status: {status_code}"
+            if hasattr(e, "response") and e.response is not None:
                 error_detail += f", Response: {e.response.text[:200]}"
             raise Exception(f"Ollama request failed: {str(e)} - {error_detail}")
 

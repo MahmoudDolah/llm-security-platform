@@ -213,9 +213,9 @@ class InMemoryRateLimiter:
 
     def __init__(self, requests_per_minute: int = 60, burst_size: int = 10):
         self.bucket = TokenBucket(requests_per_minute, burst_size)
-        self.buckets: Dict[str, Tuple[float, float]] = (
-            {}
-        )  # identifier -> (tokens, last_refill)
+        self.buckets: Dict[
+            str, Tuple[float, float]
+        ] = {}  # identifier -> (tokens, last_refill)
 
     def check_rate_limit(self, identifier: str) -> RateLimitResult:
         """Check rate limit using in-memory storage"""
