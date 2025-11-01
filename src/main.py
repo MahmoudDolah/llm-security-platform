@@ -9,7 +9,7 @@ import structlog
 from fastapi import FastAPI, HTTPException, Header, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
 from config import config
@@ -64,6 +64,7 @@ app.add_middleware(
 )
 
 # Initialize security components
+rate_limiter: Union[RateLimiter, InMemoryRateLimiter]
 try:
     rate_limiter = RateLimiter(
         redis_url=config.redis_url,
@@ -249,7 +250,7 @@ async def chat(
     # 5. Forward to LLM
     try:
         # Build kwargs for LLM client, only including non-None values
-        llm_kwargs = {"prompt": request.prompt}
+        llm_kwargs: Dict[str, Any] = {"prompt": request.prompt}
         if request.max_tokens is not None:
             llm_kwargs["max_tokens"] = request.max_tokens
         if request.temperature is not None:
