@@ -3,6 +3,7 @@ Tests for Prompt Injection Detection
 
 Tests based on OWASP LLM Top 10 - LLM01: Prompt Injection
 """
+
 import pytest
 from src.security.prompt_injection import PromptInjectionDetector, DetectionResult
 

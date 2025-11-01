@@ -3,6 +3,7 @@ Prompt Injection Detection Module
 
 Detects and blocks common prompt injection attacks based on OWASP LLM01.
 """
+
 import re
 from typing import List
 from dataclasses import dataclass
