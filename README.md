@@ -248,17 +248,10 @@ curl http://localhost:9090/metrics
 curl http://localhost:9090/metrics | grep llm_requests
 ```
 
-## Contributing
-
-Contributions welcome! Please read CONTRIBUTING.md for guidelines.
 
 ## License
 
 MIT License - See LICENSE file for details
-
-## Security
-
-For security issues, please email mahmoudamindolah@gmail.com instead of using the issue tracker.
 
 ## Testing
 
