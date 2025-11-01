@@ -9,5 +9,5 @@ __all__ = [
     "DetectionResult",
     "RateLimiter",
     "InMemoryRateLimiter",
-    "RateLimitResult"
+    "RateLimitResult",
 ]
