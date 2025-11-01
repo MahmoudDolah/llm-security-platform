@@ -277,11 +277,72 @@ pipenv run pytest tests/ -v --cov=src --cov-report=term-missing
 # - Edge cases (empty, long, unicode)
 ```
 
+## Continuous Integration
+
+The project uses GitHub Actions for automated testing, security scanning, and code quality checks. The CI/CD pipeline runs on every push to `main` and on all pull requests.
+
+### Workflow Jobs
+
+The CI pipeline (`.github/workflows/ci-cd.yaml`) includes three parallel jobs:
+
+#### 1. Test Job
+- Sets up Python 3.11 environment
+- Caches pip dependencies for faster builds
+- Installs all dependencies from `requirements.txt`
+- Runs the full test suite with pytest
+- Generates code coverage reports
+- Uploads coverage to Codecov
+
+```bash
+# Locally replicate the test job
+pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
+```
+
+#### 2. Security Scan Job
+- Uses [Trivy](https://github.com/aquasecurity/trivy) to scan for vulnerabilities
+- Scans filesystem for security issues in dependencies
+- Generates SARIF reports for GitHub Security tab
+- Automatically creates security alerts for vulnerabilities
+
+```bash
+# Locally run security scan (requires Docker)
+docker run --rm -v $(pwd):/scan aquasec/trivy fs --format table /scan
+```
+
+#### 3. Lint Job
+- Runs [Black](https://github.com/psf/black) for code formatting checks
+- Runs [Flake8](https://flake8.pycqa.org/) for style guide enforcement
+- Runs [MyPy](https://mypy.readthedocs.io/) for static type checking
+
+```bash
+# Locally run linting
+black --check src/ tests/
+flake8 src/ tests/ --max-line-length=100
+mypy src/ --ignore-missing-imports
+```
+
+### Workflow Triggers
+
+The workflow runs on:
+- **Push to main**: All jobs run to ensure main branch quality
+- **Pull requests to main**: All jobs run to validate changes before merge
+
+### Status Badges
+
+You can add these badges to track CI status:
+
+```markdown
+![CI/CD Pipeline](https://github.com/yourusername/llm-security-platform/actions/workflows/ci-cd.yaml/badge.svg)
+```
+
 ## Project Structure
 
 ```
 llm-security-platform/
-├── src/                      # Application source code
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yaml       # GitHub Actions CI/CD pipeline
+├── src/                     # Application source code
 │   ├── main.py              # FastAPI application & routes
 │   ├── config.py            # Configuration management
 │   ├── llm_client.py        # LLM backend clients
