@@ -4,7 +4,7 @@ A security gateway for Large Language Model (LLM) applications that protects aga
 
 ## Overview
 
-This platform provides a secure API gateway that sits between client applications and LLM backends, implementing multiple layers of security controls. Based on the [OWASP top ten for LLM Applications(https://owasp.org/www-project-top-10-for-large-language-model-applications/)
+This platform provides a secure API gateway that sits between client applications and LLM backends, implementing multiple layers of security controls. Based on the [OWASP top ten for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/).
 
 Built with FastAPI and designed for local development and testing of LLM security features.
 
@@ -51,7 +51,7 @@ Request → Authentication → Rate Limiting → Input Validation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/llm-security-platform.git
+git clone https://github.com/mahmouddolah/llm-security-platform.git
 cd llm-security-platform
 
 # Install dependencies with pipenv
@@ -325,7 +325,7 @@ The workflow runs on:
 You can add these badges to track CI status:
 
 ```markdown
-![CI/CD Pipeline](https://github.com/yourusername/llm-security-platform/actions/workflows/ci-cd.yaml/badge.svg)
+![CI/CD Pipeline](https://github.com/mahmouddolah/llm-security-platform/actions/workflows/ci-cd.yaml/badge.svg)
 ```
 
 ## Project Structure
