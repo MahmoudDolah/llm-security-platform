@@ -15,6 +15,7 @@ from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_
 from config import config
 from security.prompt_injection import PromptInjectionDetector
 from security.rate_limiter import RateLimiter, InMemoryRateLimiter
+from security.pii_detector import PIIDetector
 from llm_client import LLMClientFactory
 
 # Initialize logging
@@ -36,6 +37,14 @@ try:
         "Number of prompt injections detected",
         ["risk_level"],
     )
+    PII_DETECTED = Counter(
+        "llm_pii_detected",
+        "Number of PII instances detected",
+        ["pii_type", "location"],  # location: request or response
+    )
+    PII_REDACTED = Counter(
+        "llm_pii_redacted", "Number of PII instances redacted", ["pii_type"]
+    )
 except ValueError:
     # Metrics already registered (happens with hot reload)
     from prometheus_client import REGISTRY
@@ -52,6 +61,8 @@ except ValueError:
     PROMPT_INJECTION_DETECTED = REGISTRY._names_to_collectors.get(
         "llm_prompt_injection_detected"
     )  # type: ignore
+    PII_DETECTED = REGISTRY._names_to_collectors.get("llm_pii_detected")  # type: ignore
+    PII_REDACTED = REGISTRY._names_to_collectors.get("llm_pii_redacted")  # type: ignore
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -87,6 +98,12 @@ except Exception as e:
 
 prompt_detector = PromptInjectionDetector(
     threshold=config.security.prompt_injection_threshold
+)
+
+# Initialize PII detector
+pii_detector = PIIDetector(
+    enabled=config.security.pii_detection_enabled,
+    threshold=config.security.pii_detection_threshold,
 )
 
 # Initialize LLM client
@@ -192,7 +209,9 @@ async def chat(
     2. Rate limiting
     3. Input validation
     4. Prompt injection detection
-    5. Content filtering
+    5. PII detection and redaction (INPUT)
+    6. LLM processing
+    7. PII detection and redaction (OUTPUT)
     """
 
     # 1. Authentication
@@ -253,10 +272,37 @@ async def chat(
                 headers={"X-Security-Risk": detection_result.risk_level},
             )
 
-    # 5. Forward to LLM
+    # 5. PII Detection and Redaction (INPUT)
+    original_prompt = request.prompt
+    redacted_prompt = original_prompt
+    request_had_pii = False
+
+    if config.security.pii_redact_requests:
+        pii_result = pii_detector.redact(request.prompt)
+
+        if pii_result.detection_result.pii_detected:
+            redacted_prompt = pii_result.redacted_text
+            request_had_pii = True
+
+            # Update metrics
+            for match in pii_result.detection_result.matches:
+                PII_DETECTED.labels(pii_type=match.pii_type, location="request").inc()
+                PII_REDACTED.labels(pii_type=match.pii_type).inc()
+
+            # Log detection (WITHOUT actual PII values)
+            if config.security.pii_log_detections:
+                logger.warning(
+                    "PII detected in request",
+                    user=user_info["name"],
+                    pii_types=pii_result.detection_result.pii_types_found,
+                    count=pii_result.detection_result.total_count,
+                    placeholders=list(pii_result.redaction_map.keys()),
+                )
+
+    # 6. Forward to LLM
     try:
         # Build kwargs for LLM client, only including non-None values
-        llm_kwargs: Dict[str, Any] = {"prompt": request.prompt}
+        llm_kwargs: Dict[str, Any] = {"prompt": redacted_prompt}
         if request.max_tokens is not None:
             llm_kwargs["max_tokens"] = request.max_tokens
         if request.temperature is not None:
@@ -266,6 +312,34 @@ async def chat(
 
         llm_response = await llm_client.generate(**llm_kwargs)
 
+        # 7. PII Detection and Redaction (OUTPUT)
+        response_text = llm_response.content
+        response_had_pii = False
+
+        if config.security.pii_redact_responses:
+            response_pii_result = pii_detector.redact(response_text)
+
+            if response_pii_result.detection_result.pii_detected:
+                response_text = response_pii_result.redacted_text
+                response_had_pii = True
+
+                # Update metrics
+                for match in response_pii_result.detection_result.matches:
+                    PII_DETECTED.labels(
+                        pii_type=match.pii_type, location="response"
+                    ).inc()
+                    PII_REDACTED.labels(pii_type=match.pii_type).inc()
+
+                # Log detection
+                if config.security.pii_log_detections:
+                    logger.warning(
+                        "PII detected in LLM response",
+                        model=llm_response.model,
+                        pii_types=response_pii_result.detection_result.pii_types_found,
+                        count=response_pii_result.detection_result.total_count,
+                        placeholders=list(response_pii_result.redaction_map.keys()),
+                    )
+
         REQUEST_COUNT.labels(status="success", backend=config.llm.backend).inc()
 
         logger.info(
@@ -273,15 +347,18 @@ async def chat(
             user=user_info["name"],
             tokens=llm_response.tokens_used,
             model=llm_response.model,
+            request_pii_redacted=request_had_pii,
+            response_pii_redacted=response_had_pii,
         )
 
         return ChatResponse(
-            response=llm_response.content,
+            response=response_text,
             model=llm_response.model,
             tokens_used=llm_response.tokens_used,
             metadata={
                 "remaining_requests": rate_limit_result.remaining,
                 "user_tier": user_info["tier"],
+                "pii_redacted": request_had_pii or response_had_pii,
             },
         )
 
@@ -324,6 +401,7 @@ async def root():
             "Authentication (API Key)",
             "Rate Limiting (Token Bucket)",
             "Prompt Injection Detection",
+            "PII Detection & Redaction",
             "Input Validation",
             "Comprehensive Logging",
             "Metrics & Monitoring",
