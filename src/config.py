@@ -18,6 +18,20 @@ class SecurityConfig(BaseSettings):
     prompt_injection_enabled: bool = True
     prompt_injection_threshold: float = Field(default=0.8, ge=0.0, le=1.0)
 
+    # PII Detection & Redaction
+    pii_detection_enabled: bool = True
+    pii_detection_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
+    pii_redact_requests: bool = True  # Redact PII in incoming prompts
+    pii_redact_responses: bool = True  # Redact PII in LLM responses
+    pii_log_detections: bool = True  # Log PII detection events (without actual values)
+
+    # Specific PII types to detect (allow disabling specific types)
+    pii_detect_email: bool = True
+    pii_detect_phone: bool = True
+    pii_detect_ssn: bool = True
+    pii_detect_credit_card: bool = True
+    pii_detect_api_key: bool = True
+
     # Content Filtering
     block_pii: bool = True
     block_profanity: bool = True
